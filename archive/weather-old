@@ -1,0 +1,72 @@
+#!/bin/bash
+
+#Get highs and lows for today & tomorrow
+
+# longest output is 139 chars (under 140 for txt)
+# Today: Hvy Snow Shwrs; -99°F ~ 100°F; 99.9" (100-100%); SE@125mph
+# Tomorrow: Hvy Snow Shwrs; -99°F ~ 100°F; 99.9" (100-100%); NW@125mph
+
+# default to home
+lat=${1:-"40.34942"}
+lon=${2:-"-105.51366"}
+
+
+curl -s 'https://api.open-meteo.com/v1/forecast?latitude='$lat'&longitude='$lon\
+'&forecast_days=2&daily='\
+'temperature_2m_max,temperature_2m_min,'\
+'precipitation_sum,precipitation_probability_max,precipitation_probability_min,'\
+'wind_speed_10m_max,wind_direction_10m_dominant,'\
+'weather_code'\
+'&temperature_unit=fahrenheit&wind_speed_unit=mph&precipitation_unit=inch'\
+'&timezone=America%2FDenver' | \
+jq --indent 1 -M -c '.daily |
+[ "Today: ",
+{wx:.weather_code[0]},
+"; ", (.temperature_2m_min[0]|round), "°F ~ ", (.temperature_2m_max[0]|round), "°F",
+"; ", (.precipitation_sum[0]|.*10|round|./10), "inch",
+" (", .precipitation_probability_min[0], "-", .precipitation_probability_max[0], "%)",
+"; ", ((.wind_direction_10m_dominant[0]|./45|round)|(["N", "NE", "E", "SE", "S", "SW", "W", "NW"][.])),
+"@", (.wind_speed_10m_max[0]|round), "mph"
+],
+[ "Tomorrow: ",
+{wx:.weather_code[1]},
+"; ", (.temperature_2m_min[1]|round), "°F ~ ", (.temperature_2m_max[1]|round), "°F",
+"; ", (.precipitation_sum[1]|.*10|round|./10), "inch",
+" (", .precipitation_probability_min[1], "-", .precipitation_probability_max[1], "%)",
+"; ", ((.wind_direction_10m_dominant[1]|./45|round)|(["N", "NE", "E", "SE", "S", "SW", "W", "NW"][.])),
+"@", (.wind_speed_10m_max[1]|round), "mph"
+]' | \
+tr -d '[],"' | \
+sed \
+-e 's/inch/"/g' \
+-e 's/{wx:1}/Clear/g' \
+-e 's/{wx:2}/Pt Cldy/g' \
+-e 's/{wx:3}/Overcast/g' \
+-e 's/{wx:45}/Fog/g' \
+-e 's/{wx:48}/Fog/g' \
+-e 's/{wx:51}/Lt Drzle/g' \
+-e 's/{wx:53}/Mod Drzle/g' \
+-e 's/{wx:55}/Hvy Drzle/g' \
+-e 's/{wx:56}/Lt Frz Drzle/g' \
+-e 's/{wx:57}/Hvy Frz Drzle/g' \
+-e 's/{wx:61}/Lt Rain/g' \
+-e 's/{wx:63}/Mod Rain/g' \
+-e 's/{wx:65}/Hvy Rain/g' \
+-e 's/{wx:66}/Lt Frz Rain/g' \
+-e 's/{wx:67}/Hvy Frz Rain/g' \
+-e 's/{wx:71}/Lt Snow/g' \
+-e 's/{wx:73}/Mod Snow/g' \
+-e 's/{wx:75}/Hvy Snow/g' \
+-e 's/{wx:77}/Snow Grains/g' \
+-e 's/{wx:80}/Lt Showers/g' \
+-e 's/{wx:81}/Mod Showers/g' \
+-e 's/{wx:82}/Hvy Showers/g' \
+-e 's/{wx:85}/Lt Snow Shwrs/g' \
+-e 's/{wx:86}/Hvy Snow Shwrs/g' \
+-e 's/{wx:95}/T-storm/g' \
+-e 's/{wx:96}/T-storm/g' \
+-e 's/{wx:99}/T-storm/g'
+
+
+
+
