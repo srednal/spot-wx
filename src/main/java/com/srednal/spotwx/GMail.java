@@ -14,6 +14,8 @@ import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.*;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.mail.Message.RecipientType;
 import javax.mail.MessagingException;
@@ -25,17 +27,12 @@ import java.security.GeneralSecurityException;
 import java.util.*;
 
 public class GMail {
-  /**
-   * Application name
-   */
-  private static final String APPLICATION_NAME = "SpotWx";
-  /**
-   * Global instance of the JSON factory.
-   */
+
+  private static final String APPLICATION_NAME = "SpotWx"; // for gmail credentials
+
   private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-  /**
-   * Directory to store authorization tokens for this application.
-   */
+
+  // Directory to store authorization tokens for this application.
   private static final String SECURITY_DIRECTORY_PATH = "security";
   private static final String CREDENTIALS_FILE = SECURITY_DIRECTORY_PATH + "/credentials.json";
 
@@ -53,15 +50,11 @@ public class GMail {
       GmailScopes.GMAIL_SEND
   );
 
-  private static final String USER = "me";
+  public static final String USER = "me";
   private static final String INBOX = "INBOX";
   private static final String UNREAD = "UNREAD";
-  public static final String TO = "To";
-  public static final String FROM = "From";
-  public static final String REPLY_TO = "Reply-To";
-  public static final String SUBJECT = "Subject";
 
-  private final Logger logger = new Logger("GMail");
+  private static final Logger logger = LogManager.getLogger();
 
   private final Gmail service;
 
@@ -69,9 +62,11 @@ public class GMail {
     this.service = service;
   }
 
-  private static Credential getCredentials(final NetHttpTransport httpTransport) throws IOException {
-    // Load client secrets.
+  public static GMail connect() throws IOException, GeneralSecurityException {
+    // Build a new authorized API client service.
+    final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 
+    // Load client secrets.
     File credentialsFile = new java.io.File(CREDENTIALS_FILE);
     if (!credentialsFile.exists()) {
       throw new FileNotFoundException("File not found: " + CREDENTIALS_FILE);
@@ -87,68 +82,54 @@ public class GMail {
         .setAccessType("offline")
         .build();
     LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
-    return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
-  }
+    Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
 
-  public static GMail connect() throws IOException, GeneralSecurityException {
-    // Build a new authorized API client service.
-    final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
-    Gmail svc = new Gmail.Builder(httpTransport, JSON_FACTORY, getCredentials(httpTransport))
+    Gmail svc = new Gmail.Builder(httpTransport, JSON_FACTORY, credential)
         .setApplicationName(APPLICATION_NAME)
         .build();
 
     return new GMail(svc);
   }
 
-  public Map<String, String> getHeaders(Message message) {
-    MessagePart p = message.getPayload();
-    if (p == null) {
-      logger.log("No headers, payload null");
-      return Collections.emptyMap();
-    }
-    List<MessagePartHeader> msgHead = p.getHeaders();
-    if (msgHead == null) {
-      logger.log("No headers, headers null");
-      return Collections.emptyMap();
-    }
-
-    HashMap<String, String> headers = new HashMap<>();
-    msgHead.forEach(h -> headers.put(h.getName(), h.getValue()));
-    return headers;
-  }
-
-  private boolean hasHeaders(Message message, String... headers) {
-    Map<String, String> messageHeaders = getHeaders(message);
-    return Arrays.stream(headers).allMatch(messageHeaders::containsKey);
-  }
-
   private static final Set<String> seenMessageIds = new HashSet<>();
 
-  public List<Message> getUnreadMessages(String... withHeaders) throws IOException {
+  public void markUnseen(GMailMessage msg) {
+    seenMessageIds.remove(msg.getId());
+  }
 
-    // Note this message contains only id and threadId
-    List<Message> sparseMessages =
-        userMessages().list(USER).setLabelIds(List.of(INBOX, UNREAD)).execute().getMessages();
+  public List<GMailMessage> getUnreadMessages(String... withHeaders) {
+    List<GMailMessage> messages = new ArrayList<>();
+    try {
+      // Note this message contains only id and threadId
+      List<Message> sparseMessages =
+          userMessages().list(USER).setLabelIds(List.of(INBOX, UNREAD)).execute().getMessages();
 
-    if (sparseMessages == null) sparseMessages = Collections.emptyList();
+      if (sparseMessages == null) sparseMessages = Collections.emptyList();
 
-    // remove any already seen
-    List<String> messageIds = sparseMessages.stream().map(Message::getId).toList();
+      // remove any already seen
+      List<String> messageIds = sparseMessages.stream().map(Message::getId).toList();
+      List<String> newMessageIds = messageIds.stream().filter(i -> !seenMessageIds.contains(i)).toList();
 
-    List<String> newMessageIds = messageIds.stream().filter(i -> !seenMessageIds.contains(i)).toList();
+      if (newMessageIds.isEmpty()) logger.info("No new messages");
 
-    // current ids we fetched have been seen
-    seenMessageIds.clear();
-    seenMessageIds.addAll(messageIds);
+      // the ids we fetched (all unread) have been seen
+      seenMessageIds.clear();
+      seenMessageIds.addAll(messageIds);
 
-    if (newMessageIds.isEmpty()) logger.log("No new messages");
-
-    List<Message> messages = new ArrayList<>();
-    for (String id : newMessageIds) {
-      // fetch the full message
-      Message msg = userMessages().get(USER, id).execute();
-      // see if it has spot lat/lon headers
-      if (hasHeaders(msg, withHeaders)) messages.add(msg);
+      for (String id : newMessageIds) {
+        try {
+          // fetch the full message
+          GMailMessage msg = GMailMessage.fetch(userMessages(), id);
+          // see if it has spot lat/lon headers
+          if (msg.hasAllHeaders(withHeaders)) messages.add(msg);
+        } catch (IOException e) {
+          logger.error("Problem fetching message id {} - will retry", id, e);
+          seenMessageIds.remove(id);
+        }
+      }
+    } catch (IOException e) {
+      // from initial list(USER) for sparseMessages
+      logger.error("Problem listing messages - will retry", e);
     }
     return messages;
   }
@@ -164,16 +145,15 @@ public class GMail {
     return spotxdev.replace("@spotxdev.com", "@textmyspotx.com");
   }
 
-  public void replyTo(Message msg, String body) throws MessagingException, IOException {
-    Map<String, String> headers = getHeaders(msg);
-    String from = headers.get(TO); // from the recipient
-    String replyTo = fixTextAddress(headers.get(REPLY_TO));
-    logger.log("Reply to %s with %s".formatted(replyTo, body));
-    Message message = mkMessage(from, replyTo, body);
+  public void replyTo(GMailMessage msg, String body) throws IOException, MessagingException {
+    String from = msg.getTo(); // from the recipient
+    String replyTo = fixTextAddress(msg.getReplyTo());
+    logger.info("Reply to {} with {}", replyTo, body);
+    Message message = makeMessage(from, replyTo, body);
     userMessages().send(USER, message).execute();
   }
 
-  private Message mkMessage(String from, String to, String body) throws MessagingException, IOException {
+  private Message makeMessage(String from, String to, String body) throws MessagingException, IOException {
     Session session = Session.getDefaultInstance(new Properties(), null);
     MimeMessage email = new MimeMessage(session);
     email.setFrom(new InternetAddress(from));
@@ -189,9 +169,18 @@ public class GMail {
     return new Message().setRaw(encodedEmail);
   }
 
-  public void markRead(Message message) throws IOException {
-    logger.log("Marking READ");
-    userMessages().modify(USER, message.getId(),
-        new ModifyMessageRequest().setRemoveLabelIds(Collections.singletonList(UNREAD))).execute();
+  public void markRead(GMailMessage message) throws IOException {
+    logger.info("Marking READ");
+    ModifyMessageRequest req = new ModifyMessageRequest().setRemoveLabelIds(Collections.singletonList(UNREAD));
+    userMessages().modify(USER, message.getId(), req).execute();
+  }
+
+  public String formatLogMessage(GMailMessage msg) {
+    return "\n\t%s (%s)\n\tSubject: %s\n\tBody: %s".formatted(
+        msg.getFrom(),
+        msg.getSpotMessenger(),
+        msg.getSubject(),
+        msg.getSnippet()
+    );
   }
 }

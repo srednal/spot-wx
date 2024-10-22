@@ -1,30 +1,26 @@
 package com.srednal.spotwx;
 
-import com.google.api.services.gmail.model.Message;
-
 import javax.mail.MessagingException;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-// TODO provide some config for security directory? or is $CWD ok?
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+
+import static com.srednal.spotwx.GMailMessage.LAT_LONG_HEADERS;
+
 // TODO config for polling interval? meh
 // TODO apple launcher thingy to keep it running
-// TODO logs (stdout) to somewhere
-// TODO log4j or something, rotate weekly, keep 6 weeks
 // TODO move to tvMac, review mac's sleep settings
 
 public class SpotWx implements Runnable {
-  static String X_SPOT_LATITUDE = "X-SPOT-Latitude";
-  static String X_SPOT_LONGITUDE = "X-SPOT-Longitude";
-  static String X_SPOT_MESSENGER = "X-SPOT-Messenger";  // like Dave's Spot
 
-  private static final Logger logger = new Logger("SpotWx");
+
+  private static final Logger logger = LogManager.getLogger();
 
   private static final long FETCH_INTERVAL_SECONDS = 120;
 
@@ -35,7 +31,7 @@ public class SpotWx implements Runnable {
   }
 
   public static void main(String... args) throws GeneralSecurityException, IOException {
-    logger.log("Connecting");
+    logger.info("Connecting");
     GMail gMail = GMail.connect();
     if (args.length == 1 && args[0].equals("login")) return; // just establish security stuff
 
@@ -44,41 +40,57 @@ public class SpotWx implements Runnable {
   }
 
   public void run() {
-    try {
-      // scan for messages
-      List<Message> messages = gMail.getUnreadMessages(X_SPOT_LATITUDE, X_SPOT_LONGITUDE);
+    // scan for messages
+    // if issues with gmail, will return empty list and we will retry next round
+    List<GMailMessage> messages = gMail.getUnreadMessages(LAT_LONG_HEADERS);
 
-      messages.forEach(msg -> {
+    messages.forEach(msg -> {
+      Position pos = getPosition(msg);
+      if (pos != null) {
         try {
-          // fetch lon, lat
-          Map<String, String> headers = gMail.getHeaders(msg);
-          double lat = Double.parseDouble(headers.get(X_SPOT_LATITUDE));
-          double lon = Double.parseDouble(headers.get(X_SPOT_LONGITUDE));
-          logger.log("Lat = " + lat + ", Lon = " + lon, gMail, msg);
           // query weather
-          WeatherResponse wr = Weather.getWeather(lat, lon);
-          // send reply
-          gMail.replyTo(msg, wr.toString());
-          // mark message read
-          gMail.markRead(msg);
-        } catch (NumberFormatException e) {
-          // problem with a single message, move on
-          logger.log("Malformed Lat/Long, marking READ", gMail, msg);
-          try {
-            gMail.markRead(msg);
-          } catch (IOException ioe) {
-            logger.log(ioe);
-          }
-        } catch (IOException | URISyntaxException | MessagingException e) {
-          // bigger problem - exit
-          logger.log(e);
-          throw new RuntimeException(e);
+          WeatherResponse wr = Weather.getWeather(pos);
+          sendReply(msg, wr);
+        } catch (IOException e) {
+          // problem talking to the weather api, retry this message
+          logger.error("Error communicating with weather api, will retry", e);
+          gMail.markUnseen(msg);
         }
-      });
-    } catch (
-        Exception e) {
-      logger.log(e);
-      throw new RuntimeException(e);
+      }
+    });
+  }
+
+  private Position getPosition(GMailMessage msg) {
+    Position pos = null;
+    String latHeader = msg.getLatitude();
+    String lonHeader = msg.getLongitude();
+    try {
+      pos = new Position(latHeader, lonHeader);
+      logger.info("{} {}", pos, gMail.formatLogMessage(msg));
+    } catch (NumberFormatException e) {
+      // problem with a single message, move on
+      // the message has been marked SEEN so will just skip it
+      logger.error("Skipping message with malformed Lat={}, Lon={} {}",
+          latHeader, lonHeader, gMail.formatLogMessage(msg), e);
+    }
+    return pos;
+  }
+
+  private void sendReply(GMailMessage msg, WeatherResponse wr) {
+    try {
+      // send reply
+      gMail.replyTo(msg, wr.toString());
+    } catch (IOException | MessagingException e) {
+      // problem talking to the weather api, retry this message
+      logger.error("Error replying to email, will retry", e);
+      gMail.markUnseen(msg);
+    }
+
+    try {
+      // mark message read
+      gMail.markRead(msg);
+    } catch (IOException e) {
+      logger.error("Error marking message READ, leaving it unread", e);
     }
   }
 }

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns="https://logging.apache.org/xml/ns"
+               xsi:schemaLocation="
+                       https://logging.apache.org/xml/ns
+                       https://logging.apache.org/xml/ns/log4j-config-2.xsd">
+
+    <Appenders>
+        <Console name="CONSOLE">
+            <PatternLayout pattern="%d{yy-MM-dd HH:mm:ss}{America/Denver} %-5p [%c{1}]: %m%n"/>
+        </Console>
+
+        <!-- daily logs, keep for 15 days -->
+        <RollingFile name="FILE"
+                     filePattern="./log/spot-wx.%d{yyyy-MM-dd}.log">
+            <PatternLayout pattern="%d{yy-MM-dd HH:mm:ss}{America/Denver} %-5p [%c{1}]: %m%n"/>
+            <DirectWriteRolloverStrategy>
+                <Delete basePath="./log">
+                    <IfFileName regex="spot-wx\.\d{4}-\d{2}-\d{2}\.log"/>
+                    <IfLastModified age="P15D"/>
+                </Delete>
+            </DirectWriteRolloverStrategy>
+            <TimeBasedTriggeringPolicy/>
+        </RollingFile>
+
+    </Appenders>
+
+
+    <Loggers>
+        <Logger name="com.srednal.spotwx" level="INFO"/>
+        <Root level="INFO">
+            <AppenderRef ref="FILE"/>
+        </Root>
+    </Loggers>
+
+</Configuration>
