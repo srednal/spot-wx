@@ -3,26 +3,32 @@ package com.srednal.spotwx;
 import javax.mail.MessagingException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 import static com.srednal.spotwx.GMailMessage.LAT_LONG_HEADERS;
 
-// TODO config for polling interval? meh
 // TODO apple launcher thingy to keep it running
 // TODO move to tvMac, review mac's sleep settings
 
 public class SpotWx implements Runnable {
 
+  private static boolean loginOnly = false;
+  private static long pollInterval = 120;
+
+  // Directory to store authorization tokens
+  static String securityDir = "./security";
+  static String credentialsFile = securityDir + "/credentials.json";
 
   private static final Logger logger = LogManager.getLogger();
-
-  private static final long FETCH_INTERVAL_SECONDS = 120;
 
   private final GMail gMail;
 
@@ -31,12 +37,13 @@ public class SpotWx implements Runnable {
   }
 
   public static void main(String... args) throws GeneralSecurityException, IOException {
+    handleArgs(args);
     logger.info("Connecting");
     GMail gMail = GMail.connect();
-    if (args.length == 1 && args[0].equals("login")) return; // just establish security stuff
+    if (loginOnly) return; // just establish security stuff (initial setup)
 
     ScheduledExecutorService es = Executors.newScheduledThreadPool(1);
-    es.scheduleWithFixedDelay(new SpotWx(gMail), FETCH_INTERVAL_SECONDS / 2, FETCH_INTERVAL_SECONDS, TimeUnit.SECONDS);
+    es.scheduleWithFixedDelay(new SpotWx(gMail), pollInterval / 2, pollInterval, TimeUnit.SECONDS);
   }
 
   public void run() {
@@ -93,4 +100,38 @@ public class SpotWx implements Runnable {
       logger.error("Error marking message READ, leaving it unread", e);
     }
   }
+
+  private static void handleArgs(String... args) {
+    Arrays.stream(args).forEach(SpotWx::handleArg);
+  }
+
+  private static void handleArg(String arg) {
+
+    Pattern p = Pattern.compile("^([A-Za-z]+)=(.+)");
+    Matcher m = p.matcher(arg);
+
+    if (m.matches()) {
+      String param = m.group(1);
+      String val = m.group(2);
+      switch (param) {
+        case "loginOnly":
+          loginOnly = Boolean.parseBoolean(val);
+          break;
+        case "pollInterval":
+          pollInterval = Long.parseLong(val);
+          break;
+        case "securityDir":
+          securityDir = val;
+          break;
+        case "credentialsFile":
+          credentialsFile = val;
+          break;
+        default:
+          logger.error("Unrecognized param: {}={}", param, val);
+      }
+    } else {
+      logger.error("Unrecognized arg: {}", arg);
+    }
+  }
+
 }

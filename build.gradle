@@ -10,6 +10,12 @@ sourceCompatibility = 16
 targetCompatibility = 16
 version = '1.0'
 
+jar {
+    manifest {
+        attributes 'Multi-Release': 'true' // required for log4j
+    }
+}
+
 repositories {
     mavenCentral()
 }

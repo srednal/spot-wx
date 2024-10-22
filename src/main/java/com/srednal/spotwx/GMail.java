@@ -32,10 +32,6 @@ public class GMail {
 
   private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
-  // Directory to store authorization tokens for this application.
-  private static final String SECURITY_DIRECTORY_PATH = "security";
-  private static final String CREDENTIALS_FILE = SECURITY_DIRECTORY_PATH + "/credentials.json";
-
   /**
    * Global instance of the scopes required by this quickstart.
    * If modifying these scopes, delete your previously saved tokens/ folder.
@@ -67,9 +63,9 @@ public class GMail {
     final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 
     // Load client secrets.
-    File credentialsFile = new java.io.File(CREDENTIALS_FILE);
+    File credentialsFile = new java.io.File(SpotWx.credentialsFile);
     if (!credentialsFile.exists()) {
-      throw new FileNotFoundException("File not found: " + CREDENTIALS_FILE);
+      throw new FileNotFoundException("File not found: " + credentialsFile);
     }
     FileInputStream in = new FileInputStream(credentialsFile);
     GoogleClientSecrets clientSecrets =
@@ -78,7 +74,7 @@ public class GMail {
     // Build flow and trigger user authorization request.
     GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
         httpTransport, JSON_FACTORY, clientSecrets, SCOPES)
-        .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(SECURITY_DIRECTORY_PATH)))
+        .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(SpotWx.securityDir)))
         .setAccessType("offline")
         .build();
     LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();

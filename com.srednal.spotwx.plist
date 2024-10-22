@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+
+<!--  /System/Library/LaunchAgents, /Library/LaunchAgents,
+and the user’s individual Library/LaunchAgents directory.
+-->
+
+<dict>
+    <key>Label</key>
+    <string>com.srednal.spotwx</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>java</string>
+        <string>-jar</string>
+        <string>/Users/dave/dev/spot-wx/build/libs/spot-wx-1.0-all.jar</string>
+    </array>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>UserName</key>
+    <string>dave</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/dave/dev/spot-wx</key>
+
+    <key>StandardOutPath</key>
+    <string>/Users/dave/dev/spot-wx/log/spotwx.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/dave/dev/spot-wx/log/spotwx.log</string>
+
+</dict>
+</plist>
