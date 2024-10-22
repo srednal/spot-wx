@@ -161,37 +161,32 @@ public class GMail {
   // should go to @textmyspotx.com
   // per https://www.findmespot.com/en-us/support/spot-x/get-help/messaging/what-email-address-is-used-to-send-email-to-a-spot
   String fixTextAddress(String spotxdev) {
-    return spotxdev.replace("spotxdev.com", "textmyspotx.com");
+    return spotxdev.replace("@spotxdev.com", "@textmyspotx.com");
   }
 
-  public void replyTo(Message msg, String subject, String body) throws MessagingException, IOException {
+  public void replyTo(Message msg, String body) throws MessagingException, IOException {
     Map<String, String> headers = getHeaders(msg);
     String from = headers.get(TO); // from the recipient
-    String replyTo = headers.get(REPLY_TO);
-    logger.log("Reply to %s with %s:%s".formatted(replyTo, subject, body));
-    sendMessage(from, replyTo, subject, body);
+    String replyTo = fixTextAddress(headers.get(REPLY_TO));
+    logger.log("Reply to %s with %s".formatted(replyTo, body));
+    Message message = mkMessage(from, replyTo, body);
+    userMessages().send(USER, message).execute();
   }
 
-  public void sendMessage(String from, String to, String subject, String body) throws IOException, MessagingException {
-
-    Properties props = new Properties();
-    Session session = Session.getDefaultInstance(props, null);
-
+  private Message mkMessage(String from, String to, String body) throws MessagingException, IOException {
+    Session session = Session.getDefaultInstance(new Properties(), null);
     MimeMessage email = new MimeMessage(session);
-
     email.setFrom(new InternetAddress(from));
     email.addRecipient(RecipientType.TO, new InternetAddress(fixTextAddress(to)));
-    email.setSubject(subject);
+    email.setSubject(null);
     email.setText(body);
 
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
     email.writeTo(buffer);
     byte[] bytes = buffer.toByteArray();
     String encodedEmail = Base64.encodeBase64URLSafeString(bytes);
-    Message message = new Message();
-    message.setRaw(encodedEmail);
 
-    userMessages().send(USER, message).execute();
+    return new Message().setRaw(encodedEmail);
   }
 
   public void markRead(Message message) throws IOException {
