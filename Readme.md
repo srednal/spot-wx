@@ -43,7 +43,7 @@ See https://developers.google.com/gmail/api/quickstart/java.
 ## LaunchDaemon
 
 The plist `com.srednal.spotwx.plist` assumes that the project is at
-`/Users/dave/dev/spot-wx/` and java is `/opt/homebrew/opt/openjdk/bin/java`.
+`/Users/dave/dev/spot-wx/` and java is `/usr/bin/java`.
 Fix these if that's not the case.
 
 To install the service:

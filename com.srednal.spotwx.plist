@@ -13,7 +13,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/homebrew/opt/openjdk/bin/java</string>
+        <string>/usr/bin/java</string>
         <string>-jar</string>
         <string>./build/libs/spot-wx-1.0-all.jar</string>
     </array>
