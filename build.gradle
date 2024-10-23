@@ -32,3 +32,8 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-api:${log4j-api.version}'
     runtimeOnly 'org.apache.logging.log4j:log4j-core'
 }
+
+tasks.register('plutil', Exec) {
+    commandLine '/usr/bin/plutil', 'com.srednal.spotwx.plist'
+}
+tasks.build.dependsOn(plutil)

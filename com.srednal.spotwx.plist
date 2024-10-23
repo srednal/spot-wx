@@ -2,34 +2,30 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 
-<!--  /System/Library/LaunchAgents, /Library/LaunchAgents,
-and the user’s individual Library/LaunchAgents directory.
--->
-
 <dict>
-    <key>Label</key>
-    <string>com.srednal.spotwx</string>
+    <key>Label</key><string>com.srednal.spotwx</string>
+
     <key>ProgramArguments</key>
     <array>
-        <string>java</string>
+        <string>/opt/homebrew/opt/openjdk/bin/java</string>
         <string>-jar</string>
         <string>/Users/dave/dev/spot-wx/build/libs/spot-wx-1.0-all.jar</string>
+        <string>pollInterval=30</string>
     </array>
 
-    <key>KeepAlive</key>
-    <true/>
+    <key>OnDemand</key><false/>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
 
-    <key>UserName</key>
-    <string>dave</string>
+    <!-- run as user dave -->
+    <key>UserName</key><string>dave</string>
 
-    <key>WorkingDirectory</key>
-    <string>/Users/dave/dev/spot-wx</key>
+    <!-- Note that default paths for security and logging are relative to here -->
+    <key>WorkingDirectory</key><string>/Users/dave/dev/spot-wx</string>
 
-    <key>StandardOutPath</key>
-    <string>/Users/dave/dev/spot-wx/log/spotwx.log</string>
-
-    <key>StandardErrorPath</key>
-    <string>/Users/dave/dev/spot-wx/log/spotwx.log</string>
+    <!-- these should be empty, but just in case... -->
+    <key>StandardOutPath</key><string>/Users/dave/dev/spot-wx/log/spotwx-stdout.log</string>
+    <key>StandardErrorPath</key><string>/Users/dave/dev/spot-wx/log/spotwx-stderr.log</string>
 
 </dict>
 </plist>
