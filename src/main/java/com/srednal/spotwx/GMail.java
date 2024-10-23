@@ -87,7 +87,8 @@ public class GMail {
     return new GMail(svc);
   }
 
-  private static final Set<String> seenMessageIds = new HashSet<>();
+  // Messages we've seen
+  private final Set<String> seenMessageIds = new HashSet<>();
 
   public void markUnseen(GMailMessage msg) {
     seenMessageIds.remove(msg.getId());
@@ -104,13 +105,17 @@ public class GMail {
 
       // remove any already seen
       List<String> messageIds = sparseMessages.stream().map(Message::getId).toList();
+      logger.debug("Queried message ids (UNREAD,INBOX) {}", messageIds);
+      logger.debug("Seen message ids {}", seenMessageIds);
+
       List<String> newMessageIds = messageIds.stream().filter(i -> !seenMessageIds.contains(i)).toList();
+      logger.debug("New messages {}", newMessageIds);
 
-      if (newMessageIds.isEmpty()) logger.info("No new messages");
-
-      // the ids we fetched (all unread) have been seen
+      // the ids we fetched have now been seen
       seenMessageIds.clear();
       seenMessageIds.addAll(messageIds);
+
+      if (!newMessageIds.isEmpty()) logger.info("Found {} new messages", newMessageIds.size());
 
       for (String id : newMessageIds) {
         try {
@@ -127,6 +132,9 @@ public class GMail {
       // from initial list(USER) for sparseMessages
       logger.error("Problem listing messages - will retry", e);
     }
+
+    if (messages.isEmpty()) logger.info("No new messages with required headers");
+
     return messages;
   }
 
@@ -137,8 +145,10 @@ public class GMail {
   // Email sent from a spot has reply-to @spotxdev.com which doesnt exist
   // should go to @textmyspotx.com
   // per https://www.findmespot.com/en-us/support/spot-x/get-help/messaging/what-email-address-is-used-to-send-email-to-a-spot
-  String fixTextAddress(String spotxdev) {
-    return spotxdev.replace("@spotxdev.com", "@textmyspotx.com");
+  String fixTextAddress(String addr) {
+    String fixed = addr.replace("@spotxdev.com", "@textmyspotx.com");
+    logger.debug("fixTextAddress {} => {}", addr, fixed);
+    return fixed;
   }
 
   public void replyTo(GMailMessage msg, String body) throws IOException, MessagingException {
@@ -169,14 +179,5 @@ public class GMail {
     logger.info("Marking READ");
     ModifyMessageRequest req = new ModifyMessageRequest().setRemoveLabelIds(Collections.singletonList(UNREAD));
     userMessages().modify(USER, message.getId(), req).execute();
-  }
-
-  public String formatLogMessage(GMailMessage msg) {
-    return "\n\t%s (%s)\n\tSubject: %s\n\tBody: %s".formatted(
-        msg.getFrom(),
-        msg.getSpotMessenger(),
-        msg.getSubject(),
-        msg.getSnippet()
-    );
   }
 }

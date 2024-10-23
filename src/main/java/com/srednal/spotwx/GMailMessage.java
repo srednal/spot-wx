@@ -82,4 +82,14 @@ public class GMailMessage {
   public String getSnippet() {
     return message.getSnippet();
   }
+
+  @Override
+  public String toString() {
+    return "\n\t%s (%s)\n\tSubject: %s\n\tBody: %s".formatted(
+        getFrom(),
+        getSpotMessenger(),
+        getSubject(),
+        getSnippet()
+    );
+  }
 }

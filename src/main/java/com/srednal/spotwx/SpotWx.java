@@ -42,11 +42,13 @@ public class SpotWx implements Runnable {
     GMail gMail = GMail.connect();
     if (loginOnly) return; // just establish security stuff (initial setup)
 
+    logger.info("Starting poll with delay {}s", pollInterval);
     ScheduledExecutorService es = Executors.newScheduledThreadPool(1);
     es.scheduleWithFixedDelay(new SpotWx(gMail), pollInterval / 2, pollInterval, TimeUnit.SECONDS);
   }
 
   public void run() {
+    logger.debug("poll in");
     // scan for messages
     // if issues with gmail, will return empty list and we will retry next round
     List<GMailMessage> messages = gMail.getUnreadMessages(LAT_LONG_HEADERS);
@@ -65,6 +67,7 @@ public class SpotWx implements Runnable {
         }
       }
     });
+    logger.debug("poll out");
   }
 
   private Position getPosition(GMailMessage msg) {
@@ -73,12 +76,12 @@ public class SpotWx implements Runnable {
     String lonHeader = msg.getLongitude();
     try {
       pos = new Position(latHeader, lonHeader);
-      logger.info("{} {}", pos, gMail.formatLogMessage(msg));
+      logger.info("{} {}", pos, msg);
     } catch (NumberFormatException e) {
       // problem with a single message, move on
       // the message has been marked SEEN so will just skip it
       logger.error("Skipping message with malformed Lat={}, Lon={} {}",
-          latHeader, lonHeader, gMail.formatLogMessage(msg), e);
+          latHeader, lonHeader, msg, e);
     }
     return pos;
   }
@@ -113,6 +116,7 @@ public class SpotWx implements Runnable {
     if (m.matches()) {
       String param = m.group(1);
       String val = m.group(2);
+      logger.info("Arg: {}={}", param, val);
       switch (param) {
         case "loginOnly":
           loginOnly = Boolean.parseBoolean(val);
@@ -127,11 +131,10 @@ public class SpotWx implements Runnable {
           credentialsFile = val;
           break;
         default:
-          logger.error("Unrecognized param: {}={}", param, val);
+          logger.error("Unrecognized param: {}", param);
       }
     } else {
-      logger.error("Unrecognized arg: {}", arg);
+      logger.error("Unrecognized arg pattern: {}", arg);
     }
   }
-
 }
