@@ -5,9 +5,7 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +34,13 @@ public class SpotWx implements Runnable {
     this.gMail = gMail;
   }
 
+  private static final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
+
+  static {
+    Runtime.getRuntime().addShutdownHook(new Thread(executorService::close));
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> logger.info("Exiting")));
+  }
+
   public static void main(String... args) throws GeneralSecurityException, IOException {
     handleArgs(args);
     logger.info("Connecting");
@@ -43,31 +48,36 @@ public class SpotWx implements Runnable {
     if (loginOnly) return; // just establish security stuff (initial setup)
 
     logger.info("Starting poll with delay {}s", pollInterval);
-    ScheduledExecutorService es = Executors.newScheduledThreadPool(1);
-    es.scheduleWithFixedDelay(new SpotWx(gMail), pollInterval / 2, pollInterval, TimeUnit.SECONDS);
+    executorService.scheduleWithFixedDelay(new SpotWx(gMail), pollInterval / 2, pollInterval, TimeUnit.SECONDS);
   }
 
   public void run() {
-    logger.debug("poll in");
-    // scan for messages
-    // if issues with gmail, will return empty list and we will retry next round
-    List<GMailMessage> messages = gMail.getUnreadMessages(LAT_LONG_HEADERS);
+    try {
+      logger.debug("poll in");
+      // scan for messages
+      // if issues with gmail, will return empty list and we will retry next round
+      List<GMailMessage> messages = gMail.getUnreadMessages(LAT_LONG_HEADERS);
 
-    messages.forEach(msg -> {
-      Position pos = getPosition(msg);
-      if (pos != null) {
-        try {
-          // query weather
-          WeatherResponse wr = Weather.getWeather(pos);
-          sendReply(msg, wr);
-        } catch (IOException e) {
-          // problem talking to the weather api, retry this message
-          logger.error("Error communicating with weather api, will retry", e);
-          gMail.markUnseen(msg);
+      messages.forEach(msg -> {
+        Position pos = getPosition(msg);
+        if (pos != null) {
+          try {
+            // query weather
+            WeatherResponse wr = Weather.getWeather(pos);
+            sendReply(msg, wr);
+          } catch (IOException e) {
+            // problem talking to the weather api, retry this message
+            logger.error("Error communicating with weather api, will retry", e);
+            gMail.markUnseen(msg);
+          }
         }
-      }
-    });
-    logger.debug("poll out");
+      });
+      logger.debug("poll out");
+    } catch (Throwable t) {
+      // uncaught exception should exit the app
+      logger.fatal("Error during poll", t);
+      executorService.shutdown();
+    }
   }
 
   private Position getPosition(GMailMessage msg) {

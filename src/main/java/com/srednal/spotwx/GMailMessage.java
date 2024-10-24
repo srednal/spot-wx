@@ -21,8 +21,8 @@ public class GMailMessage {
   private static final String X_SPOT_MESSENGER = "X-SPOT-Messenger";  // like Dave's Spot
   public static final String[] LAT_LONG_HEADERS = {X_SPOT_LATITUDE, X_SPOT_LONGITUDE};
 
-  private Message message;
-  private Map<String, String> headers;
+  private final Message message;
+  private final Map<String, String> headers;
 
   private GMailMessage(Message message, Map<String, String> headers) {
     this.message = message;

@@ -21,14 +21,14 @@ public class WeatherResponse {
     public Daily() {
     }
 
-    public String[] time;
-    public int[] weather_code;
-    public float[] temperature_2m_max;
-    public float[] temperature_2m_min;
-    public float[] precipitation_sum;    // round precip to .1"
-    public int[] precipitation_probability_max;
-    public int[] wind_direction_10m_dominant;
-    public float[] wind_speed_10m_max;
+    private String[] time;
+    private int[] weather_code;
+    private float[] temperature_2m_max;
+    private float[] temperature_2m_min;
+    private float[] precipitation_sum;    // round precip to .1"
+    private int[] precipitation_probability_max;
+    private int[] wind_direction_10m_dominant;
+    private float[] wind_speed_10m_max;
 
     public String[] getTime() {
       return time;

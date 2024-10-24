@@ -142,12 +142,12 @@ public class GMail {
     return service.users().messages();
   }
 
-  // Email sent from a spot has reply-to @spotxdev.com which doesnt exist
+  // Email sent from a spot has reply-to @spotxdev.com which doesn't exist
   // should go to @textmyspotx.com
   // per https://www.findmespot.com/en-us/support/spot-x/get-help/messaging/what-email-address-is-used-to-send-email-to-a-spot
-  String fixTextAddress(String addr) {
-    String fixed = addr.replace("@spotxdev.com", "@textmyspotx.com");
-    logger.debug("fixTextAddress {} => {}", addr, fixed);
+  String fixTextAddress(String email) {
+    String fixed = email.replace("@spotxdev.com", "@textmyspotx.com");
+    logger.debug("fixTextAddress {} => {}", email, fixed);
     return fixed;
   }
 
