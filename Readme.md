@@ -47,15 +47,17 @@ The plist `com.srednal.spotwx.plist` assumes that the project is at
 Fix these if that's not the case.
 
 To install the service:
+
 ```
-sudo cp ~/dev/spot-wx/com.srednal.spotwx.plist /Library/LaunchDaemons/
-sudo launchctl load -w /Library/LaunchDaemons/com.srednal.spotwx.plist
+sudo ./load/sh
 ```
 
 To shut it down:
 ```
-sudo launchctl unload -w /Library/LaunchDaemons/com.srednal.spotwx.plist
+sudo ./unload.sh
 ```
+To see if it's running, check the logs or run `jps`
+and look for `spot-wx-1.0-all.jar`.
 
 ## Logs
 
