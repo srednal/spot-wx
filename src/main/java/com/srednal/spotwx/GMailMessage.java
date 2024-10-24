@@ -19,6 +19,9 @@ public class GMailMessage {
   private static final String X_SPOT_LATITUDE = "X-SPOT-Latitude";
   private static final String X_SPOT_LONGITUDE = "X-SPOT-Longitude";
   private static final String X_SPOT_MESSENGER = "X-SPOT-Messenger";  // like Dave's Spot
+  // Other spot headers:
+  // X-SPOT-Time: 1729189481
+  // X-SPOT-Type: Custom
   public static final String[] LAT_LONG_HEADERS = {X_SPOT_LATITUDE, X_SPOT_LONGITUDE};
 
   private final Message message;
