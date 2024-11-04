@@ -142,19 +142,9 @@ public class GMail {
     return service.users().messages();
   }
 
-  // Email sent from a spot has reply-to @spotxdev.com which doesn't exist
-  // should go to @textmyspotx.com
-  // per https://www.findmespot.com/en-us/support/spot-x/get-help/messaging/what-email-address-is-used-to-send-email-to-a-spot
-  // Reported to Spot 10/22/2024 - JIRA-369440
-  String fixTextAddress(String email) {
-    String fixed = email.replace("@spotxdev.com", "@textmyspotx.com");
-    logger.debug("fixTextAddress {} => {}", email, fixed);
-    return fixed;
-  }
-
   public void replyTo(GMailMessage msg, String body) throws IOException, MessagingException {
     String from = msg.getTo(); // from the recipient
-    String replyTo = fixTextAddress(msg.getReplyTo());
+    String replyTo = msg.getReplyTo();
     logger.info("Reply to {} with {}", replyTo, body);
     Message message = makeMessage(from, replyTo, body);
     userMessages().send(USER, message).execute();
@@ -164,7 +154,7 @@ public class GMail {
     Session session = Session.getDefaultInstance(new Properties(), null);
     MimeMessage email = new MimeMessage(session);
     email.setFrom(new InternetAddress(from));
-    email.addRecipient(RecipientType.TO, new InternetAddress(fixTextAddress(to)));
+    email.addRecipient(RecipientType.TO, new InternetAddress(to));
     email.setSubject(null);
     email.setText(body);
 
