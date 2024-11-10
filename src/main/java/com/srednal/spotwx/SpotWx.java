@@ -86,7 +86,7 @@ public class SpotWx implements Runnable {
     String lonHeader = msg.getLongitude();
     try {
       pos = new Position(latHeader, lonHeader);
-      logger.info("{} {}", pos, msg);
+      logger.info("{}\n\t{}", pos, msg);
     } catch (NumberFormatException e) {
       // problem with a single message, move on
       // the message has been marked SEEN so will just skip it

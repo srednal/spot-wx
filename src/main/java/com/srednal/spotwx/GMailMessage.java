@@ -88,7 +88,7 @@ public class GMailMessage {
 
   @Override
   public String toString() {
-    return "\n\t%s (%s)\n\tSubject: %s\n\tBody: %s".formatted(
+    return "%s (%s)\n\tSubject: %s\n\tBody: %s".formatted(
         getFrom(),
         getSpotMessenger(),
         getSubject(),

@@ -11,6 +11,6 @@ public class Position {
 
   @Override
   public String toString() {
-    return "Lat=%s, Lon=%s".formatted(latitude, longitude);
+    return "Lat=%f, Lon=%f => https://www.google.com/maps/?q=%f,%f".formatted(latitude, longitude, latitude, longitude);
   }
 }
