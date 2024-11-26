@@ -83,12 +83,18 @@ public class GMailMessage {
   }
 
   public String getSnippet() {
-    return message.getSnippet();
+    // snippet is something like (no CRs, just spaces):
+    // Device Name: Dave&#39;s Spot GPS location
+    // Date/Time: 11/09/2024 09:03:10 MST
+    // The message sender did not share their GPS location with you.
+    // Message: WHATEVER
+    // You have received this message because ...
+    return message.getSnippet().replaceAll(".* Message: ","");
   }
 
   @Override
   public String toString() {
-    return "%s (%s)\n\tSubject: %s\n\tBody: %s".formatted(
+    return "%s (%s)\n\tSubject: %s\n\tMessage: %s".formatted(
         getFrom(),
         getSpotMessenger(),
         getSubject(),

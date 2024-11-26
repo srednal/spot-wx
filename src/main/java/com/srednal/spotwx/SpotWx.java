@@ -14,9 +14,6 @@ import org.apache.logging.log4j.LogManager;
 
 import static com.srednal.spotwx.GMailMessage.LAT_LONG_HEADERS;
 
-// TODO apple launcher thingy to keep it running
-// TODO move to tvMac, review mac's sleep settings
-
 public class SpotWx implements Runnable {
 
   private static boolean loginOnly = false;
@@ -63,7 +60,7 @@ public class SpotWx implements Runnable {
         if (pos != null) {
           try {
             // query weather
-            WeatherResponse wr = Weather.getWeather(pos);
+            WeatherReport wr = WeatherQuery.getWeatherReport(pos);
             sendReply(msg, wr);
           } catch (IOException e) {
             // problem talking to the weather api, retry this message
@@ -85,7 +82,7 @@ public class SpotWx implements Runnable {
     String latHeader = msg.getLatitude();
     String lonHeader = msg.getLongitude();
     try {
-      pos = new Position(latHeader, lonHeader);
+      pos = new Position(Double.parseDouble(latHeader), Double.parseDouble(lonHeader));
       logger.info("{}\n\t{}", pos, msg);
     } catch (NumberFormatException e) {
       // problem with a single message, move on
@@ -96,12 +93,13 @@ public class SpotWx implements Runnable {
     return pos;
   }
 
-  private void sendReply(GMailMessage msg, WeatherResponse wr) {
+  private void sendReply(GMailMessage msg, WeatherReport wr) {
     try {
-      // send reply
-      gMail.replyTo(msg, wr.toString());
+      // send reply - hourly & daily (2 messages due to 140 char limit)
+      gMail.replyTo(msg, wr.hourlyReport());
+      gMail.replyTo(msg, wr.dailyReport());
     } catch (IOException | MessagingException e) {
-      // problem talking to the weather api, retry this message
+      // problem talking to the gmail api, retry this message
       logger.error("Error replying to email, will retry", e);
       gMail.markUnseen(msg);
     }
@@ -119,10 +117,8 @@ public class SpotWx implements Runnable {
   }
 
   private static void handleArg(String arg) {
-
     Pattern p = Pattern.compile("^([A-Za-z]+)=(.+)");
     Matcher m = p.matcher(arg);
-
     if (m.matches()) {
       String param = m.group(1);
       String val = m.group(2);

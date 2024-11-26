@@ -1,14 +1,23 @@
 package com.srednal.spotwx;
 
-import java.util.HashMap;
-import java.util.Map;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import java.time.DateTimeException;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+import static java.lang.Math.getExponent;
 import static java.lang.Math.round;
 
 public class WeatherReport {
 
+  private static final Logger logger = LogManager.getLogger();
+
   // Weather condition codes, per open-meteo docs(abbreviated for shorter output)
   private static final Map<Integer, String> WX_CODES;
+
   static {
     WX_CODES = new HashMap<>();
     WX_CODES.put(0, "Clear");
@@ -41,73 +50,135 @@ public class WeatherReport {
     WX_CODES.put(99, "T-storm");
   }
 
-  public WeatherReport(String time, int weather_code, float temperature_2m_max, float temperature_2m_min, float precipitation_sum, int precipitation_probability_max, int wind_direction_10m_dominant, float wind_speed_10m_max) {
-    this.time = time;
-    this.weather_code = weather_code;
-    this.temperature_2m_max = temperature_2m_max;
-    this.temperature_2m_min = temperature_2m_min;
-    this.precipitation_sum = precipitation_sum;
-    this.precipitation_probability_max = precipitation_probability_max;
-    this.wind_direction_10m_dominant = wind_direction_10m_dominant;
-    this.wind_speed_10m_max = wind_speed_10m_max;
-  }
+  private static final String[] DIRECTIONS = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+
+  private static final long TOP_OF_HOUR_SEC = 15 * 60;
 
   public static String wxCondition(int code) {
     return WX_CODES.getOrDefault(code, String.valueOf(code));
   }
 
-  private static final String[] DIRECTIONS = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
-
-  public static String windDirection(float degrees) {
+  public static String direction(float degrees) {
     int l = round(degrees * DIRECTIONS.length / 360) % DIRECTIONS.length;
     return DIRECTIONS[l];
   }
 
-  public String time;
-  public int weather_code;
-  public float temperature_2m_max;
-  public float temperature_2m_min;
-  public float precipitation_sum;
-  public int precipitation_probability_max;
-  public int wind_direction_10m_dominant;
-  public float wind_speed_10m_max;
+  private final List<Hourly> hourlies;
+  private final List<Daily> dailies;
 
-  public String getDay() {
-    // 2024-10-20
-    return time.substring(5).replace('-', '/');
+  public WeatherReport(WeatherJson json) {
+    hourlies = Hourly.getReports(json);
+    dailies = Daily.getReports(json);
   }
 
-  public String getWeather() {
-    return wxCondition(weather_code);
+  private <A> String concatWithNewline(List<A> l) {
+    return l.stream().map(A::toString).reduce((a, b) -> a + "\n" + b).orElse("Unavailable");
   }
 
-  public String getTempRange() {
-    return "%.0f/%.0fF".formatted(temperature_2m_max, temperature_2m_min);
+  public String hourlyReport() {
+    return concatWithNewline(hourlies.subList(0, 2));
   }
 
-  public String getPrecipitation() {
-    return "%.1f\"".formatted(precipitation_sum);
+  public String dailyReport() {
+    return concatWithNewline(dailies.subList(0, 2));
   }
 
-  public String getPrecipitationProbability() {
-    return "%d%%".formatted(precipitation_probability_max);
+  private record Hourly(String time, int weatherCode, float temperature, float precipitation,
+                        int precipitationProbability, int windDirection, float windSpeed) {
+
+    static List<Hourly> getReports(WeatherJson json) {
+      WeatherJson.Hourly h = json.getHourly();
+      List<Hourly> reports = new ArrayList<>();
+
+      // hourly reports start at the current hour, truncated
+      // if it's past the 'top of the hour', then the first report is 'old news'
+      // and mostly unhelpful, so we skip it
+      int firstReport = 0;
+      String firstTime = h.getTime(0);
+      try {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm").withZone(json.getZoneId());
+        Instant reportBaseTime = Instant.from(fmt.parse(firstTime));
+        // for reportBaseTime = 13:00 (report timezone) => add 15 min => 13:15
+        // if now is 13:20 => isAfer 13:15 => skip first report
+        if (Instant.now().isAfter(reportBaseTime.plusSeconds(TOP_OF_HOUR_SEC)) && h.getLength() > 1) {
+          firstReport = 1;
+        }
+      } catch (DateTimeException e) {
+        logger.error("Unable to parse time {} {}", firstTime, json.getTimezone(), e);
+      }
+
+      for (int i = firstReport; i < h.getLength(); i++) {
+        reports.add(new Hourly(
+            h.getTime(i),
+            h.getWeather_code(i),
+            h.getTemperature_2m(i),
+            h.getPrecipitation(i),
+            h.getPrecipitation_probability(i),
+            h.getWind_direction_10m(i),
+            h.getWind_speed_10m(i)));
+      }
+      return reports;
+    }
+
+    // 2024-11-26T07:00 => 07:00
+    public String getTime() {
+      return time.replaceFirst(".*T", "");
+    }
+
+    @Override
+    public String toString() {
+      return "%s: %s | %.0fF | %.1f\" (%d%%) | %s@%.0fmph".formatted(
+          getTime(),
+          WeatherReport.wxCondition(weatherCode),
+          temperature,
+          precipitation,
+          precipitationProbability,
+          WeatherReport.direction(windDirection),
+          windSpeed
+      );
+    }
   }
 
-  public String getWindDirection() {
-    return windDirection(wind_direction_10m_dominant);
-  }
+  private record Daily(String time, int weatherCode, float temperatureMax, float temperatureMin, float precipitation,
+                       int precipitationProbability, int windDirection, float windSpeed) {
+    static List<Daily> getReports(WeatherJson json) {
+      WeatherJson.Daily d = json.getDaily();
+      List<Daily> reports = new ArrayList<>();
+      for (int i = 0; i < d.getLength(); i++) {
+        reports.add(new Daily(
+            d.getTime(i),
+            d.getWeather_code(i),
+            d.getTemperature_2m_max(i),
+            d.getTemperature_2m_min(i),
+            d.getPrecipitation_sum(i),
+            d.getPrecipitation_probability_max(i),
+            d.getWind_direction_10m_dominant(i),
+            d.getWind_speed_10m_max(i)));
+      }
+      return reports;
+    }
 
-  public String getWindSpeed() {
-    return "%.0fmph".formatted(wind_speed_10m_max);
-  }
+    // 2024-10-20 => 10/20
+    public String getDate() {
+      return time.replaceFirst("[0-9]+-", "").replace('-', '/');
+    }
 
-//   10/19: Fog | 59/31F | 0" (5%) | E@10mph
-//   10/20: Overcast | 64/37F | 0" (5%) | S@14mph
-// Large/long output ~124 chars (under 140 limit)
-//   10/19: Hvy Frz Drizzle | 111/-99F | 10.9" (100%) | SE@110mph
-//   10/20: Lt Snow Showers | 111/-99F | 10.0" (100%) | SW@114mph
-  @Override
-  public String toString() {
-    return "%s: %s | %s | %s (%s) | %s@%s".formatted(getDay(), getWeather(), getTempRange(), getPrecipitation(), getPrecipitationProbability(), getWindDirection(), getWindSpeed());
+    @Override
+    public String toString() {
+      //   10/19: Fog | 59/31F | 0" (5%) | E@10mph
+      //   10/20: Overcast | 64/37F | 0" (5%) | S@14mph
+      // Large/long output ~124 chars (under 140 limit)
+      //   10/19: Hvy Frz Drizzle | 111/-99F | 10.9" (100%) | SE@110mph
+      //   10/20: Lt Snow Showers | 111/-99F | 10.0" (100%) | SW@114mph
+      return "%s: %s | %.0f/%.0fF | %.1f\" (%d%%) | %s@%.0fmph".formatted(
+          getDate(),
+          WeatherReport.wxCondition(weatherCode),
+          temperatureMax,
+          temperatureMin,
+          precipitation,
+          precipitationProbability,
+          WeatherReport.direction(windDirection),
+          windSpeed);
+    }
   }
 }

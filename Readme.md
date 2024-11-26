@@ -1,22 +1,31 @@
 # SpotWx
 
 Queries a gmail account for new messages from a SpotX device.
-Replies with a 2-day weather forecast for the device's location.
+Replies with a 2-hour and 2-day weather forecast for the device's location.
 
 Location is determined from the email headers
 `X-SPOT-Latitude` and `X-SPOT-Longitude`.
 
 Weather is queried from [open-meteo.com](https://open-meteo.com/en/docs),
 and summarized to be less than the SpotX 140 character text limit.
-The report will look something like:
-```
-10/23: Fog | 59/31F | 0.2" (5%) | SE@10mph
-10/24: Overcast | 57/35F | 0.0" (1%) | W@35mph
-```
-On the 23<sup>rd</sup>, the forecast is for Fog with a high of 59 and low of 31ºF.
-There's a 5% chance of 0.2" precipitation. Winds from the SE at 10 mph.   
 
-A reply email back to the device is sent containing the weather summary.
+The hourly report will look something like:
+```
+12:00: Clear | 40F | 0.0" (20%) | W@19mph
+13:00: Pt Cloudy | 40F | 0.0" (19%) | W@15mph
+```
+
+The daily report will look something like:
+```
+11/26: Snow | 40/24F | 2.0" (53%) | W@27mph
+11/27: Hvy Snow | 31/17F | 4.7" (54%) | W@17mph
+```
+(On the 26<sup>th</sup>, the forecast is for Snow with a high of 40 and low of 24ºF.
+There's a 53% chance of 2". Winds from the W at 27 mph.)
+
+Two reply emails back to the device are sent containing the weather summaries,
+one with two hours, and one with two days
+(they are too long for a single 140 character message).
 
 To be run in the background (i.e. from `/Library/LaunchDaemons/`).
 Default polling for new email is every 2 minutes.

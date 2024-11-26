@@ -28,6 +28,9 @@ dependencies {
 
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.4.2'
 
+    implementation 'net.iakovlev:timeshape:2024a.24'
+    implementation 'org.slf4j:slf4j-nop:2.0.16' // timeshape uses slf4j, don't log
+
     implementation platform('org.apache.logging.log4j:log4j-bom:2.24.1')
     implementation 'org.apache.logging.log4j:log4j-api:${log4j-api.version}'
     runtimeOnly 'org.apache.logging.log4j:log4j-core'
