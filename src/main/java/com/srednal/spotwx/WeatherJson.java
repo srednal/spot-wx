@@ -1,10 +1,7 @@
 package com.srednal.spotwx;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
-import java.time.DateTimeException;
-import java.time.ZoneId;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Model for json response from Weather
@@ -75,7 +72,7 @@ public class WeatherJson {
     this.daily = daily;
   }
 
-  public static class Hourly {
+  public class Hourly {
     private String[] time;
     private int[] weather_code;
     private float[] temperature_2m;
@@ -94,6 +91,16 @@ public class WeatherJson {
 
     public String getTime(int i) {
       return time[i];
+    }
+
+    private final DateTimeFormatter fmt = DateTimeFormatter.ISO_DATE_TIME.withZone(getZoneId());
+
+    public Instant getInstant(int i) {
+      return Instant.from(fmt.parse(getTime(i)));
+    }
+
+    public LocalDateTime getDateTime(int i) {
+      return LocalDateTime.parse(getTime(i));
     }
 
     public void setTime(String[] time) {
@@ -193,6 +200,10 @@ public class WeatherJson {
 
     public String getTime(int i) {
       return time[i];
+    }
+
+    public LocalDate getDate(int i) {
+      return LocalDate.parse(getTime(i));
     }
 
     public void setTime(String[] time) {

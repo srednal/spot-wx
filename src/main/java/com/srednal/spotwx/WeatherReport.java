@@ -5,10 +5,11 @@ import org.apache.logging.log4j.Logger;
 
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-import static java.lang.Math.getExponent;
 import static java.lang.Math.round;
 
 public class WeatherReport {
@@ -83,7 +84,7 @@ public class WeatherReport {
     return concatWithNewline(dailies.subList(0, 2));
   }
 
-  private record Hourly(String time, int weatherCode, float temperature, float precipitation,
+  private record Hourly(LocalDateTime time, int weatherCode, float temperature, float precipitation,
                         int precipitationProbability, int windDirection, float windSpeed) {
 
     static List<Hourly> getReports(WeatherJson json) {
@@ -91,25 +92,24 @@ public class WeatherReport {
       List<Hourly> reports = new ArrayList<>();
 
       // hourly reports start at the current hour, truncated
-      // if it's past the 'top of the hour', then the first report is 'old news'
-      // and mostly unhelpful, so we skip it
+      // if it's past the 'top of the hour', then the first report
+      // is 'old news' and mostly unhelpful, so skip it
       int firstReport = 0;
-      String firstTime = h.getTime(0);
       try {
-        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm").withZone(json.getZoneId());
-        Instant reportBaseTime = Instant.from(fmt.parse(firstTime));
+        Instant reportBaseTime = h.getInstant(0);
         // for reportBaseTime = 13:00 (report timezone) => add 15 min => 13:15
-        // if now is 13:20 => isAfer 13:15 => skip first report
+        // if now is 13:20 => isAfter 13:15 => skip first report
         if (Instant.now().isAfter(reportBaseTime.plusSeconds(TOP_OF_HOUR_SEC)) && h.getLength() > 1) {
           firstReport = 1;
         }
       } catch (DateTimeException e) {
-        logger.error("Unable to parse time {} {}", firstTime, json.getTimezone(), e);
+        // just go with what we got
+        logger.error("Unable to parse time {} {}", h.getTime(0), json.getTimezone(), e);
       }
 
       for (int i = firstReport; i < h.getLength(); i++) {
         reports.add(new Hourly(
-            h.getTime(i),
+            h.getDateTime(i),
             h.getWeather_code(i),
             h.getTemperature_2m(i),
             h.getPrecipitation(i),
@@ -120,15 +120,12 @@ public class WeatherReport {
       return reports;
     }
 
-    // 2024-11-26T07:00 => 07:00
-    public String getTime() {
-      return time.replaceFirst(".*T", "");
-    }
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("MM/dd HH:mm");
 
     @Override
     public String toString() {
       return "%s: %s | %.0fF | %.1f\" (%d%%) | %s@%.0fmph".formatted(
-          getTime(),
+          TIME_FMT.format(time),
           WeatherReport.wxCondition(weatherCode),
           temperature,
           precipitation,
@@ -139,14 +136,14 @@ public class WeatherReport {
     }
   }
 
-  private record Daily(String time, int weatherCode, float temperatureMax, float temperatureMin, float precipitation,
+  private record Daily(LocalDate date, int weatherCode, float temperatureMax, float temperatureMin, float precipitation,
                        int precipitationProbability, int windDirection, float windSpeed) {
     static List<Daily> getReports(WeatherJson json) {
       WeatherJson.Daily d = json.getDaily();
       List<Daily> reports = new ArrayList<>();
       for (int i = 0; i < d.getLength(); i++) {
         reports.add(new Daily(
-            d.getTime(i),
+            d.getDate(i),
             d.getWeather_code(i),
             d.getTemperature_2m_max(i),
             d.getTemperature_2m_min(i),
@@ -158,10 +155,7 @@ public class WeatherReport {
       return reports;
     }
 
-    // 2024-10-20 => 10/20
-    public String getDate() {
-      return time.replaceFirst("[0-9]+-", "").replace('-', '/');
-    }
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd");
 
     @Override
     public String toString() {
@@ -171,7 +165,7 @@ public class WeatherReport {
       //   10/19: Hvy Frz Drizzle | 111/-99F | 10.9" (100%) | SE@110mph
       //   10/20: Lt Snow Showers | 111/-99F | 10.0" (100%) | SW@114mph
       return "%s: %s | %.0f/%.0fF | %.1f\" (%d%%) | %s@%.0fmph".formatted(
-          getDate(),
+          DATE_FMT.format(date),
           WeatherReport.wxCondition(weatherCode),
           temperatureMax,
           temperatureMin,
