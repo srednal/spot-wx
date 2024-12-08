@@ -94,7 +94,7 @@ public class GMail {
     seenMessageIds.remove(msg.getId());
   }
 
-  public List<GMailMessage> getUnreadMessages(String... withHeaders) {
+  public List<GMailMessage> getUnreadMessages() {
     List<GMailMessage> messages = new ArrayList<>();
     try {
       // Note this message contains only id and threadId
@@ -122,7 +122,7 @@ public class GMail {
           // fetch the full message
           GMailMessage msg = GMailMessage.fetch(userMessages(), id);
           // see if it has spot lat/lon headers
-          if (msg.hasAllHeaders(withHeaders)) messages.add(msg);
+          if ( msg.hasLatLon() ) messages.add(msg);
         } catch (IOException e) {
           logger.error("Problem fetching message id {} - will retry", id, e);
           seenMessageIds.remove(id);
@@ -133,7 +133,7 @@ public class GMail {
       logger.error("Problem listing messages - will retry", e);
     }
 
-    if (messages.isEmpty()) logger.info("No new messages with required headers");
+    if (messages.isEmpty()) logger.info("No new messages with required format");
 
     return messages;
   }
@@ -145,6 +145,7 @@ public class GMail {
   public void replyTo(GMailMessage msg, String body) throws IOException, MessagingException {
     String from = msg.getTo(); // from the recipient
     String replyTo = msg.getReplyTo();
+    if (replyTo == null) replyTo = msg.getFrom();
     logger.info("Reply to {} with {}", replyTo, body);
     Message message = makeMessage(from, replyTo, body);
     userMessages().send(USER, message).execute();
@@ -171,4 +172,5 @@ public class GMail {
     ModifyMessageRequest req = new ModifyMessageRequest().setRemoveLabelIds(Collections.singletonList(UNREAD));
     userMessages().modify(USER, message.getId(), req).execute();
   }
+
 }

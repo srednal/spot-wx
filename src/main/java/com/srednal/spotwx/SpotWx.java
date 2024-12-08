@@ -12,8 +12,6 @@ import java.util.regex.Pattern;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
-import static com.srednal.spotwx.GMailMessage.LAT_LONG_HEADERS;
-
 public class SpotWx implements Runnable {
 
   private static boolean loginOnly = false;
@@ -53,7 +51,7 @@ public class SpotWx implements Runnable {
       logger.debug("poll in");
       // scan for messages
       // if issues with gmail, will return empty list and we will retry next round
-      List<GMailMessage> messages = gMail.getUnreadMessages(LAT_LONG_HEADERS);
+      List<GMailMessage> messages = gMail.getUnreadMessages();
 
       messages.forEach(msg -> {
         Position pos = getPosition(msg);

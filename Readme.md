@@ -6,6 +6,12 @@ Replies with a 2-hour and 2-day weather forecast for the device's location.
 Location is determined from the email headers
 `X-SPOT-Latitude` and `X-SPOT-Longitude`.
 
+Alternately, if the message body contains only
+a longitude and latitude (as in "40.31043, -105.64559"),
+then this longitude and latitude will be used (but headers
+take prescience). This is useful for testing or planning: copy the
+coordinates from google maps, gaiagps, etc and paste them into an email.
+
 Weather is queried from [open-meteo.com](https://open-meteo.com/en/docs),
 and summarized to be less than the SpotX 140 character text limit.
 
@@ -20,10 +26,10 @@ The daily report will look something like:
 11/26: Snow | 40/24F | 2.0" (53%) | W@27mph
 11/27: Hvy Snow | 31/17F | 4.7" (54%) | W@17mph
 ```
-(On the 26<sup>th</sup>, the forecast is for Snow with a high of 40 and low of 24ºF.
+(That is: On the 26<sup>th</sup>, the forecast is for Snow with a high of 40 and low of 24ºF.
 There's a 53% chance of 2". Winds from the W at 27 mph.)
 
-Two reply emails back to the device are sent containing the weather summaries,
+Two reply emails back to the device (sender) are sent containing the weather summaries,
 one with two hours, and one with two days
 (they are too long for a single 140 character message).
 
