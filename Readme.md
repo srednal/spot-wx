@@ -9,7 +9,7 @@ Location is determined from the email headers
 Alternately, if the message body contains only
 a longitude and latitude (as in "40.31043, -105.64559"),
 then this longitude and latitude will be used (but headers
-take prescience). This is useful for testing or planning: copy the
+take precedence). This is useful for testing or planning: copy the
 coordinates from google maps, gaiagps, etc and paste them into an email.
 
 Weather is queried from [open-meteo.com](https://open-meteo.com/en/docs),
