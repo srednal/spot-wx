@@ -1,0 +1,9 @@
+{
+  "sendEmail": true,
+  "markEmailRead": true,
+  "pollInterval": 120,
+  "initialDelay": 60,
+  "securityDir": "./security",
+  "credentialsFileName": "./security/credentials.json",
+  "topOfHourMinutes": 15
+}

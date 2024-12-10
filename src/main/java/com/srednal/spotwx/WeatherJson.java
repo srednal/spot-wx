@@ -8,34 +8,34 @@ import java.time.format.DateTimeFormatter;
  */
 public class WeatherJson {
 
-  private String latitude;
-  private String longitude;
-  private float elevation; // meters
+  private double latitude;
+  private double longitude;
+  private double elevation; // meters
   private String timezone;
   private Hourly hourly;
   private Daily daily;
 
-  public String getLatitude() {
+  public double getLatitude() {
     return latitude;
   }
 
-  public void setLatitude(String latitude) {
+  public void setLatitude(double latitude) {
     this.latitude = latitude;
   }
 
-  public String getLongitude() {
+  public double getLongitude() {
     return longitude;
   }
 
-  public void setLongitude(String longitude) {
+  public void setLongitude(double longitude) {
     this.longitude = longitude;
   }
 
-  public float getElevation() {
+  public double getElevation() {
     return elevation;
   }
 
-  public void setElevation(float elevation) {
+  public void setElevation(double elevation) {
     this.elevation = elevation;
   }
 
@@ -75,11 +75,11 @@ public class WeatherJson {
   public class Hourly {
     private String[] time;
     private int[] weather_code;
-    private float[] temperature_2m;
-    private float[] precipitation;
+    private double[] temperature_2m;
+    private double[] precipitation;
     private int[] precipitation_probability;
     private int[] wind_direction_10m;
-    private float[] wind_speed_10m;
+    private double[] wind_speed_10m;
 
     public int getLength() {
       return time.length;
@@ -119,27 +119,27 @@ public class WeatherJson {
       this.weather_code = weather_code;
     }
 
-    public float[] getTemperature_2m() {
+    public double[] getTemperature_2m() {
       return temperature_2m;
     }
 
-    public float getTemperature_2m(int i) {
+    public double getTemperature_2m(int i) {
       return temperature_2m[i];
     }
 
-    public void setTemperature_2m_max(float[] temperature_2m) {
+    public void setTemperature_2m_max(double[] temperature_2m) {
       this.temperature_2m = temperature_2m;
     }
 
-    public float[] getPrecipitation() {
+    public double[] getPrecipitation() {
       return precipitation;
     }
 
-    public float getPrecipitation(int i) {
+    public double getPrecipitation(int i) {
       return precipitation[i];
     }
 
-    public void setPrecipitation_sum(float[] precipitation) {
+    public void setPrecipitation_sum(double[] precipitation) {
       this.precipitation = precipitation;
     }
 
@@ -167,15 +167,15 @@ public class WeatherJson {
       this.wind_direction_10m = wind_direction_10m;
     }
 
-    public float[] getWind_speed_10m() {
+    public double[] getWind_speed_10m() {
       return wind_speed_10m;
     }
 
-    public float getWind_speed_10m(int i) {
+    public double getWind_speed_10m(int i) {
       return wind_speed_10m[i];
     }
 
-    public void setWind_speed_10m_max(float[] wind_speed_10m) {
+    public void setWind_speed_10m_max(double[] wind_speed_10m) {
       this.wind_speed_10m = wind_speed_10m;
     }
   }
@@ -183,12 +183,12 @@ public class WeatherJson {
   public static class Daily {
     private String[] time;
     private int[] weather_code;
-    private float[] temperature_2m_max;
-    private float[] temperature_2m_min;
-    private float[] precipitation_sum;
+    private double[] temperature_2m_max;
+    private double[] temperature_2m_min;
+    private double[] precipitation_sum;
     private int[] precipitation_probability_max;
     private int[] wind_direction_10m_dominant;
-    private float[] wind_speed_10m_max;
+    private double[] wind_speed_10m_max;
 
     public int getLength() {
       return time.length;
@@ -222,39 +222,39 @@ public class WeatherJson {
       this.weather_code = weather_code;
     }
 
-    public float[] getTemperature_2m_max() {
+    public double[] getTemperature_2m_max() {
       return temperature_2m_max;
     }
 
-    public float getTemperature_2m_max(int i) {
+    public double getTemperature_2m_max(int i) {
       return temperature_2m_max[i];
     }
 
-    public void setTemperature_2m_max(float[] temperature_2m_max) {
+    public void setTemperature_2m_max(double[] temperature_2m_max) {
       this.temperature_2m_max = temperature_2m_max;
     }
 
-    public float[] getTemperature_2m_min() {
+    public double[] getTemperature_2m_min() {
       return temperature_2m_min;
     }
 
-    public float getTemperature_2m_min(int i) {
+    public double getTemperature_2m_min(int i) {
       return temperature_2m_min[i];
     }
 
-    public void setTemperature_2m_min(float[] temperature_2m_min) {
+    public void setTemperature_2m_min(double[] temperature_2m_min) {
       this.temperature_2m_min = temperature_2m_min;
     }
 
-    public float[] getPrecipitation_sum() {
+    public double[] getPrecipitation_sum() {
       return precipitation_sum;
     }
 
-    public float getPrecipitation_sum(int i) {
+    public double getPrecipitation_sum(int i) {
       return precipitation_sum[i];
     }
 
-    public void setPrecipitation_sum(float[] precipitation_sum) {
+    public void setPrecipitation_sum(double[] precipitation_sum) {
       this.precipitation_sum = precipitation_sum;
     }
 
@@ -282,15 +282,15 @@ public class WeatherJson {
       this.wind_direction_10m_dominant = wind_direction_10m_dominant;
     }
 
-    public float[] getWind_speed_10m_max() {
+    public double[] getWind_speed_10m_max() {
       return wind_speed_10m_max;
     }
 
-    public float getWind_speed_10m_max(int i) {
+    public double getWind_speed_10m_max(int i) {
       return wind_speed_10m_max[i];
     }
 
-    public void setWind_speed_10m_max(float[] wind_speed_10m_max) {
+    public void setWind_speed_10m_max(double[] wind_speed_10m_max) {
       this.wind_speed_10m_max = wind_speed_10m_max;
     }
   }

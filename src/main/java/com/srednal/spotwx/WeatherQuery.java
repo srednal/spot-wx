@@ -28,19 +28,18 @@ public class WeatherQuery {
     });
   }
 
-  public static WeatherReport getWeatherReport(Position pos) throws IOException {
-    // retrieve weather for the next 2 days and the next 3 hours
-    URL url;
+  static URL getWeatherURL(Position pos) {
     try {
-      url = new URIBuilder()
+      // retrieve weather for the next 2 days and the next 3 hours
+      return new URIBuilder()
           .setScheme("https")
           .setHost("api.open-meteo.com")
           .setPath("v1/forecast")
           .addParameter("latitude", String.valueOf(pos.latitude))
           .addParameter("longitude", String.valueOf(pos.longitude))
           .addParameter("temperature_unit", "fahrenheit")
-          .addParameter("lwind_speed_unit", "mph")
-          .addParameter("lprecipitation_unit", "inch")
+          .addParameter("wind_speed_unit", "mph")
+          .addParameter("precipitation_unit", "inch")
           .addParameter("timezone", String.valueOf(getTimeZone(pos)))
           .addParameter("forecast_days", "2")
           .addParameter("daily", "weather_code")
@@ -62,36 +61,19 @@ public class WeatherQuery {
       logger.fatal("Error building URI (should not happen!)", e);
       throw new RuntimeException(e);
     }
-
-    logger.info("Fetching weather from {}", url);
-
-    try (InputStream is = url.openStream()) {
-      ObjectMapper mapper = new ObjectMapper()
-          .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-
-      WeatherJson response = mapper.readValue(is, WeatherJson.class);
-
-      return new WeatherReport(response);
-    }
   }
 
-  /**
-   * Fetch the weather reports etc and print
-   */
-  public static void main(String[] args) {
-    try {
-      Position pos = new Position(40.3746, -105.5231); // Estes Park
-//      Position pos = new Position(35.733224, -78.872085); // Apex, NC
-//      Position pos = new Position(51.523479, -0.128771); // London
-      System.out.println(getTimeZone(pos));
-      System.out.println(pos);
-      System.out.println("---");
-      WeatherReport wr = WeatherQuery.getWeatherReport(pos);
-      System.out.println(wr.hourlyReport());
-      System.out.println("---");
-      System.out.println(wr.dailyReport());
-    } catch (Exception e) {
-      System.err.println(e);
+  public static WeatherReport getWeatherReport(Position pos) throws IOException {
+    URL url = getWeatherURL(pos);
+    logger.info("Fetching weather from {}", url);
+    return new WeatherReport(parseJson(url.openStream()));
+  }
+
+  static WeatherJson parseJson(InputStream stream) throws IOException {
+    ObjectMapper mapper = new ObjectMapper()
+        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    try (InputStream is = stream) {
+      return mapper.readValue(is, WeatherJson.class);
     }
   }
 }

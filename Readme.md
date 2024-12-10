@@ -36,17 +36,31 @@ one with two hours, and one with two days
 To be run in the background (i.e. from `/Library/LaunchDaemons/`).
 Default polling for new email is every 2 minutes.
 
-## Command Line Args
+## Initialization
 
-Command line arguments are of the form `paramName=value`, (no spaces).
+Run once with the single command line argument `loginOnly` to
+pop up a browser for auth and store security tokens in `securityDir`.
 
-loginOnly | boolean | default false
-: If true, just connect to GMail and exit. Use from the command line once to pop up a browser for auth and store security tokens in `securityDir`.
+## Configuration
+
+Properties below may be overriden in `./config.json`.
+There are others, but these are the main ones.
+
+sendEmail | boolean | default true
+: If false, will just log the email reply without sending it
+(potentially useful for manual debugging).
+
+markEmailRead boolean | default true
+: If false, will not mark a processed email as read
+(potentially useful for manual debugging).
 
 pollInterval | long (seconds) | default 120
 : Frequency to poll GMail for new mail, in seconds.
-To avoid hammering the service if there's an error, first
-poll delays for half this time.
+
+initialDelay | long (seconds) | default 60
+: Delay after start to poll GMail for new mail, in seconds.
+Delay avoids hammering the service if there's an error
+(and launchDaemon keeps restarting it).
 
 securityDir | string (path) | default ./security 
 : Where authorization file is stored after initial browser-based authorization.
@@ -88,7 +102,7 @@ but in any case are sent to
 
 ### TL;DR
 ```
-gradle build shadowJar
+gradle build
 ```
 
 ### Gradle Tasks

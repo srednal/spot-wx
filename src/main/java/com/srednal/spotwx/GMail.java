@@ -28,8 +28,6 @@ import java.util.*;
 
 public class GMail {
 
-  private static final String APPLICATION_NAME = "SpotWx"; // for gmail credentials
-
   private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
 
   /**
@@ -51,6 +49,7 @@ public class GMail {
   private static final String UNREAD = "UNREAD";
 
   private static final Logger logger = LogManager.getLogger();
+  private static final Config config = Config.getInstance();
 
   private final Gmail service;
 
@@ -63,7 +62,7 @@ public class GMail {
     final NetHttpTransport httpTransport = GoogleNetHttpTransport.newTrustedTransport();
 
     // Load client secrets.
-    File credentialsFile = new java.io.File(SpotWx.credentialsFile);
+    File credentialsFile = new java.io.File(config.getCredentialsFileName());
     if (!credentialsFile.exists()) {
       throw new FileNotFoundException("File not found: " + credentialsFile);
     }
@@ -74,14 +73,14 @@ public class GMail {
     // Build flow and trigger user authorization request.
     GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(
         httpTransport, JSON_FACTORY, clientSecrets, SCOPES)
-        .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(SpotWx.securityDir)))
+        .setDataStoreFactory(new FileDataStoreFactory(new java.io.File(config.getSecurityDir())))
         .setAccessType("offline")
         .build();
     LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
     Credential credential = new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
 
     Gmail svc = new Gmail.Builder(httpTransport, JSON_FACTORY, credential)
-        .setApplicationName(APPLICATION_NAME)
+        .setApplicationName(config.getApplicationName())
         .build();
 
     return new GMail(svc);
@@ -122,7 +121,7 @@ public class GMail {
           // fetch the full message
           GMailMessage msg = GMailMessage.fetch(userMessages(), id);
           // see if it has spot lat/lon headers
-          if ( msg.hasLatLon() ) messages.add(msg);
+          if (msg.hasLatLon()) messages.add(msg);
         } catch (IOException e) {
           logger.error("Problem fetching message id {} - will retry", id, e);
           seenMessageIds.remove(id);
@@ -148,7 +147,7 @@ public class GMail {
     if (replyTo == null) replyTo = msg.getFrom();
     logger.info("Reply to {} with {}", replyTo, body);
     Message message = makeMessage(from, replyTo, body);
-    userMessages().send(USER, message).execute();
+    if (config.isSendEmail()) userMessages().send(USER, message).execute();
   }
 
   private Message makeMessage(String from, String to, String body) throws MessagingException, IOException {
@@ -170,7 +169,7 @@ public class GMail {
   public void markRead(GMailMessage message) throws IOException {
     logger.info("Marking READ");
     ModifyMessageRequest req = new ModifyMessageRequest().setRemoveLabelIds(Collections.singletonList(UNREAD));
-    userMessages().modify(USER, message.getId(), req).execute();
+    if (config.isMarkEmailRead()) userMessages().modify(USER, message.getId(), req).execute();
   }
 
 }

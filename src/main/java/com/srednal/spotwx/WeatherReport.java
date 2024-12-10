@@ -15,6 +15,7 @@ import static java.lang.Math.round;
 public class WeatherReport {
 
   private static final Logger logger = LogManager.getLogger();
+  private static final Config config = Config.getInstance();
 
   // Weather condition codes, per open-meteo docs(abbreviated for shorter output)
   private static final Map<Integer, String> WX_CODES;
@@ -53,14 +54,12 @@ public class WeatherReport {
 
   private static final String[] DIRECTIONS = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
 
-  private static final long TOP_OF_HOUR_SEC = 15 * 60;
-
   public static String wxCondition(int code) {
     return WX_CODES.getOrDefault(code, String.valueOf(code));
   }
 
   public static String direction(float degrees) {
-    int l = round(degrees * DIRECTIONS.length / 360) % DIRECTIONS.length;
+    int l = round((360 + degrees) * DIRECTIONS.length / 360) % DIRECTIONS.length;
     return DIRECTIONS[l];
   }
 
@@ -68,7 +67,11 @@ public class WeatherReport {
   private final List<Daily> dailies;
 
   public WeatherReport(WeatherJson json) {
-    hourlies = Hourly.getReports(json);
+    this(json, Instant.now());
+  }
+
+  WeatherReport(WeatherJson json, Instant now) {
+    hourlies = Hourly.getReports(json, now);
     dailies = Daily.getReports(json);
   }
 
@@ -76,18 +79,27 @@ public class WeatherReport {
     return l.stream().map(A::toString).reduce((a, b) -> a + "\n" + b).orElse("Unavailable");
   }
 
+  List<Hourly> get2Hourlies() {
+    return hourlies.subList(0, 2);
+  }
+
   public String hourlyReport() {
-    return concatWithNewline(hourlies.subList(0, 2));
+    return concatWithNewline(get2Hourlies());
+  }
+
+  List<Daily> get2Dailies() {
+    return dailies.subList(0, 2);
   }
 
   public String dailyReport() {
-    return concatWithNewline(dailies.subList(0, 2));
+    return concatWithNewline(get2Dailies());
   }
 
-  private record Hourly(LocalDateTime time, int weatherCode, float temperature, float precipitation,
-                        int precipitationProbability, int windDirection, float windSpeed) {
 
-    static List<Hourly> getReports(WeatherJson json) {
+  record Hourly(LocalDateTime time, int weatherCode, double temperature, double precipitation,
+                int precipitationProbability, int windDirection, double windSpeed) {
+
+    static List<Hourly> getReports(WeatherJson json, Instant now) {
       WeatherJson.Hourly h = json.getHourly();
       List<Hourly> reports = new ArrayList<>();
 
@@ -99,7 +111,7 @@ public class WeatherReport {
         Instant reportBaseTime = h.getInstant(0);
         // for reportBaseTime = 13:00 (report timezone) => add 15 min => 13:15
         // if now is 13:20 => isAfter 13:15 => skip first report
-        if (Instant.now().isAfter(reportBaseTime.plusSeconds(TOP_OF_HOUR_SEC)) && h.getLength() > 1) {
+        if (now.isAfter(reportBaseTime.plusSeconds(config.getTopOfHourMinutes() * 60)) && h.getLength() > 1) {
           firstReport = 1;
         }
       } catch (DateTimeException e) {
@@ -120,11 +132,11 @@ public class WeatherReport {
       return reports;
     }
 
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("MM/dd HH:mm");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern(config.getHourlyTimeFormat());
 
     @Override
     public String toString() {
-      return "%s: %s | %.0fF | %.1f\" (%d%%) | %s@%.0fmph".formatted(
+      return config.getHourlyFormat().formatted(
           TIME_FMT.format(time),
           WeatherReport.wxCondition(weatherCode),
           temperature,
@@ -136,8 +148,9 @@ public class WeatherReport {
     }
   }
 
-  private record Daily(LocalDate date, int weatherCode, float temperatureMax, float temperatureMin, float precipitation,
-                       int precipitationProbability, int windDirection, float windSpeed) {
+  private record Daily(LocalDate date, int weatherCode, double temperatureMax, double temperatureMin,
+                       double precipitation,
+                       int precipitationProbability, int windDirection, double windSpeed) {
     static List<Daily> getReports(WeatherJson json) {
       WeatherJson.Daily d = json.getDaily();
       List<Daily> reports = new ArrayList<>();
@@ -155,7 +168,7 @@ public class WeatherReport {
       return reports;
     }
 
-    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MM/dd");
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern(config.getDailyDateFormat());
 
     @Override
     public String toString() {
@@ -164,7 +177,7 @@ public class WeatherReport {
       // Large/long output ~124 chars (under 140 limit)
       //   10/19: Hvy Frz Drizzle | 111/-99F | 10.9" (100%) | SE@110mph
       //   10/20: Lt Snow Showers | 111/-99F | 10.0" (100%) | SW@114mph
-      return "%s: %s | %.0f/%.0fF | %.1f\" (%d%%) | %s@%.0fmph".formatted(
+      return config.getDailyFormat().formatted(
           DATE_FMT.format(date),
           WeatherReport.wxCondition(weatherCode),
           temperatureMax,

@@ -1,0 +1,25 @@
+{
+  "sendEmail": true,
+  "markEmailRead": true,
+
+  "pollInterval": 120,
+  "initialDelay": 60,
+
+  "applicationName": "SpotWx",
+  "securityDir": "./security",
+  "credentialsFileName": "./security/credentials.json",
+
+  "latitudeHeader": "X-SPOT-Latitude",
+  "longitudeHeader": "X-SPOT-Longitude",
+  "messengerHeader": "X-SPOT-Messenger",
+  "latitudeLongitudeRE": "\\s*(-?\\d{1,3}(?:\\.\\d+)?),\\s*(-?\\d{1,3}(?:\\.\\d+)?)\\s*",
+
+  "topOfHourMinutes": 15,
+  "hourlyTimeFormat": "MM/dd HH:mm",
+  "hourlyFormat": "%s: %s | %.0fF | %.1f\" (%d%%) | %s@%.0fmph",
+
+  "dailyDateFormat": "MM/dd",
+  "dailyFormat": "%s: %s | %.0f/%.0fF | %.1f\" (%d%%) | %s@%.0fmph",
+
+  "messageTrimRE": ".* Message: "
+}

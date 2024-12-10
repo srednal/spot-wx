@@ -16,28 +16,25 @@ import java.util.regex.Pattern;
 
 public class GMailMessage {
 
+  private static final Logger logger = LogManager.getLogger();
+  private static final Config config = Config.getInstance();
+
   private static final String TO = "To";
   private static final String FROM = "From";
   private static final String REPLY_TO = "Reply-To";
   private static final String SUBJECT = "Subject";
-  private static final String X_SPOT_LATITUDE = "X-SPOT-Latitude";
-  private static final String X_SPOT_LONGITUDE = "X-SPOT-Longitude";
-  private static final String X_SPOT_MESSENGER = "X-SPOT-Messenger";  // like Dave's Spot
+  public static final String[] LAT_LONG_HEADERS = {config.getLongitudeHeader(), config.getLatitudeHeader()};
   // Other spot headers:
   // X-SPOT-Time: 1729189481
   // X-SPOT-Type: Custom
-  public static final String[] LAT_LONG_HEADERS = {X_SPOT_LATITUDE, X_SPOT_LONGITUDE};
-
-  private static final Logger logger = LogManager.getLogger();
 
   // pattern to find lat lon in body snippet
-  private static final Pattern LAT_LON_RE =
-      Pattern.compile("\\s*(-?\\d{1,3}(?:\\.\\d+)?),\\s*(-?\\d{1,3}(?:\\.\\d+)?)\\s*");
+  private static final Pattern LAT_LON_RE = Pattern.compile(config.getLatitudeLongitudeRE());
 
   private final Message message;
   private final Map<String, String> headers;
 
-  private GMailMessage(Message message, Map<String, String> headers) {
+  GMailMessage(Message message, Map<String, String> headers) {
     this.message = message;
     this.headers = headers;
   }
@@ -84,10 +81,8 @@ public class GMailMessage {
   }
 
   public String getLatitude() {
-    String lat = null;
-    if (headers.containsKey(X_SPOT_LONGITUDE)) {
-      lat = getHeader(X_SPOT_LATITUDE);
-    } else {
+    String lat = getHeader(config.getLatitudeHeader());
+    if (lat == null) {
       Matcher m = LAT_LON_RE.matcher(getSnippet());
       if (m.matches()) lat = m.group(1);
     }
@@ -95,18 +90,20 @@ public class GMailMessage {
   }
 
   public String getLongitude() {
-    String lon = null;
-    if (headers.containsKey(X_SPOT_LONGITUDE)) {
-      lon = getHeader(X_SPOT_LATITUDE);
-    } else {
+    String lon = getHeader(config.getLongitudeHeader());
+    if (lon == null) {
       Matcher m = LAT_LON_RE.matcher(getSnippet());
       if (m.matches()) lon = m.group(2);
     }
     return lon;
   }
 
+  public Position getPosition() throws NumberFormatException {
+    return new Position(Double.parseDouble(getLatitude()), Double.parseDouble(getLongitude()));
+  }
+
   public String getSpotMessenger() {
-    return getHeader(X_SPOT_MESSENGER);
+    return getHeader(config.getMessengerHeader());
   }
 
   public String getSnippet() {
@@ -114,11 +111,9 @@ public class GMailMessage {
     // Device Name: Dave&#39;s Spot GPS location
     // Date/Time: 11/09/2024 09:03:10 MST
     // The message sender did not share their GPS location with you.
-    // Message: WHATEVER
+    // Message: <the actual message>
     // You have received this message because ...
-    String snip = message.getSnippet().replaceAll(".* Message: ", "");
-    logger.debug("Snippet: {}", snip);
-    return snip;
+    return message.getSnippet();
   }
 
   @Override
@@ -127,7 +122,7 @@ public class GMailMessage {
         getFrom(),
         getSpotMessenger(),
         getSubject(),
-        getSnippet()
+        getSnippet().replaceAll(config.getMessageTrimRE(), "")
     );
   }
 }

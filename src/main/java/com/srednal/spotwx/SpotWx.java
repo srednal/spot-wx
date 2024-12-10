@@ -3,25 +3,17 @@ package com.srednal.spotwx;
 import javax.mail.MessagingException;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
 public class SpotWx implements Runnable {
 
-  private static boolean loginOnly = false;
-  private static long pollInterval = 120;
-
-  // Directory to store authorization tokens
-  static String securityDir = "./security";
-  static String credentialsFile = securityDir + "/credentials.json";
-
   private static final Logger logger = LogManager.getLogger();
+  private static final Config config = Config.getInstance();
 
   private final GMail gMail;
 
@@ -37,13 +29,16 @@ public class SpotWx implements Runnable {
   }
 
   public static void main(String... args) throws GeneralSecurityException, IOException {
-    handleArgs(args);
     logger.info("Connecting");
     GMail gMail = GMail.connect();
-    if (loginOnly) return; // just establish security stuff (initial setup)
+    if (isLoginOnly(args)) return; // just establish security stuff (initial setup)
 
-    logger.info("Starting poll with delay {}s", pollInterval);
-    executorService.scheduleWithFixedDelay(new SpotWx(gMail), pollInterval / 2, pollInterval, TimeUnit.SECONDS);
+    logger.info("Starting poll in {}s with delay {}s", config.getInitialDelay(), config.getPollInterval());
+    executorService.scheduleWithFixedDelay(new SpotWx(gMail), config.getInitialDelay(), config.getPollInterval(), TimeUnit.SECONDS);
+  }
+
+  private static boolean isLoginOnly(String[] args) {
+    return args.length != 0 && "loginOnly".equals(args[0]);
   }
 
   public void run() {
@@ -75,18 +70,16 @@ public class SpotWx implements Runnable {
     }
   }
 
-  private Position getPosition(GMailMessage msg) {
+  Position getPosition(GMailMessage msg) {
     Position pos = null;
-    String latHeader = msg.getLatitude();
-    String lonHeader = msg.getLongitude();
     try {
-      pos = new Position(Double.parseDouble(latHeader), Double.parseDouble(lonHeader));
+      pos = msg.getPosition();
       logger.info("{}\n\t{}", pos, msg);
     } catch (NumberFormatException e) {
       // problem with a single message, move on
       // the message has been marked SEEN so will just skip it
       logger.error("Skipping message with malformed Lat={}, Lon={} {}",
-          latHeader, lonHeader, msg, e);
+          msg.getLatitude(), msg.getLongitude(), msg, e);
     }
     return pos;
   }
@@ -107,38 +100,6 @@ public class SpotWx implements Runnable {
       gMail.markRead(msg);
     } catch (IOException e) {
       logger.error("Error marking message READ, leaving it unread", e);
-    }
-  }
-
-  private static void handleArgs(String... args) {
-    Arrays.stream(args).forEach(SpotWx::handleArg);
-  }
-
-  private static void handleArg(String arg) {
-    Pattern p = Pattern.compile("^([A-Za-z]+)=(.+)");
-    Matcher m = p.matcher(arg);
-    if (m.matches()) {
-      String param = m.group(1);
-      String val = m.group(2);
-      logger.info("Arg: {}={}", param, val);
-      switch (param) {
-        case "loginOnly":
-          loginOnly = Boolean.parseBoolean(val);
-          break;
-        case "pollInterval":
-          pollInterval = Long.parseLong(val);
-          break;
-        case "securityDir":
-          securityDir = val;
-          break;
-        case "credentialsFile":
-          credentialsFile = val;
-          break;
-        default:
-          logger.error("Unrecognized param: {}", param);
-      }
-    } else {
-      logger.error("Unrecognized arg pattern: {}", arg);
     }
   }
 }

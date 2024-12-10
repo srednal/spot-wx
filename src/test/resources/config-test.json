@@ -1,0 +1,5 @@
+{
+  "sendEmail": false,
+  "applicationName": "TestSpot",
+  "pollInterval": 90
+}

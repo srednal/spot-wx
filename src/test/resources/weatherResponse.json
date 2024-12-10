@@ -1,0 +1,99 @@
+{
+  "latitude": 40.362362,
+  "longitude": -105.5146,
+  "generationtime_ms": 0.2560615539550781,
+  "utc_offset_seconds": -25200,
+  "timezone": "America/Denver",
+  "timezone_abbreviation": "MST",
+  "elevation": 2300.0,
+  "hourly_units": {
+    "time": "iso8601",
+    "weather_code": "wmo code",
+    "temperature_2m": "°F",
+    "precipitation": "inch",
+    "precipitation_probability": "%",
+    "wind_direction_10m": "°",
+    "wind_speed_10m": "mp/h"
+  },
+  "hourly": {
+    "time": [
+      "2024-12-09T14:00",
+      "2024-12-09T15:00",
+      "2024-12-09T16:00"
+    ],
+    "weather_code": [
+      3,
+      3,
+      71
+    ],
+    "temperature_2m": [
+      27.4,
+      25.8,
+      22.0
+    ],
+    "precipitation": [
+      1.300,
+      0.000,
+      6.108
+    ],
+    "precipitation_probability": [
+      2,
+      5,
+      10
+    ],
+    "wind_direction_10m": [
+      24,
+      35,
+      289
+    ],
+    "wind_speed_10m": [
+      10.2,
+      9.3,
+      12.1
+    ]
+  },
+  "daily_units": {
+    "time": "iso8601",
+    "weather_code": "wmo code",
+    "temperature_2m_max": "°F",
+    "temperature_2m_min": "°F",
+    "precipitation_sum": "inch",
+    "precipitation_probability_max": "%",
+    "wind_direction_10m_dominant": "°",
+    "wind_speed_10m_max": "mp/h"
+  },
+  "daily": {
+    "time": [
+      "2024-12-09",
+      "2024-12-10"
+    ],
+    "weather_code": [
+      71,
+      3
+    ],
+    "temperature_2m_max": [
+      29.3,
+      23.1
+    ],
+    "temperature_2m_min": [
+      10.7,
+      10.1
+    ],
+    "precipitation_sum": [
+      6.008,
+      0.000
+    ],
+    "precipitation_probability_max": [
+      12,
+      2
+    ],
+    "wind_direction_10m_dominant": [
+      28,
+      270
+    ],
+    "wind_speed_10m_max": [
+      16.7,
+      24.0
+    ]
+  }
+}
