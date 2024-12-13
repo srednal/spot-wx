@@ -10,9 +10,16 @@ sourceCompatibility = 16
 targetCompatibility = 16
 version = '1.0'
 
+def gitLocal = 'git diff --quiet --exit-code'.execute().waitFor()
+def gitHash = 'git rev-parse --short HEAD'.execute().text.trim()
+def implVersion = gitLocal == 0 ? gitHash : 'LOCAL'
+
 jar {
+    // to check the manifest impl version:
+    // unzip -p build/libs/spot-wx-1.0-all.jar META-INF/MANIFEST.MF
     manifest {
         attributes 'Multi-Release': 'true' // required for log4j
+        attributes 'Implementation-Version': implVersion
     }
 }
 
